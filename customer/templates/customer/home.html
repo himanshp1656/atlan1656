@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book a Vehicle</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            width: 70%;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .booking-form {
+            width: 60%;
+        }
+
+        .booked-requests {
+            width: 35%;
+            background-color: #fafafa;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-left: 20px;
+            height: 600px; /* Fixed height */
+            overflow-y: auto; 
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label, input, select, button {
+            margin: 10px 0;
+            padding: 10px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .estimated-cost {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .booked-requests h3 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .booking-item {
+            background-color: #fff;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .booking-item p {
+            margin: 5px 0;
+        }
+        
+        .messages {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Booking Form -->
+        <div class="booking-form">
+            <h2>Book a Vehicle</h2>
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="{% if message.tags %}{{ message.tags }}{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <form action="/customer/book/" method="POST" id="bookingForm">
+                {% csrf_token %}
+                
+                <label for="pickup_location">Pickup Location:</label>
+                <input type="text" id="pickup_location" name="pickup_location" required>
+                
+                <label for="dropoff_location">Drop-off Location:</label>
+                <input type="text" id="dropoff_location" name="dropoff_location" required>
+                
+                <label for="vehicle_type">Vehicle Type:</label>
+                <select id="vehicle_type" name="vehicle_type" required>
+                    <option value="Truck">Truck</option>
+                    <option value="Van">Van</option>
+                    <option value="Bike">Bike</option>
+                </select>
+                <label for="scheduled_time">Schedule Booking Time:</label>
+<input type="date" id="scheduled_time" name="scheduled_time">
+
+                <label for="estimated_cost">Estimated Cost: (RS / km)</label>
+                <input type="text" id="estimated_cost" name="estimated_cost" readonly value="0">
+                
+                <p class="estimated-cost">Estimated cost will be calculated based on the selected vehicle type and distance.</p>
+                
+                <button type="submit">Submit Booking</button>
+            </form>
+            <button type="button" id="getPriceButton" onclick="calculateCost()">Get My Price</button>
+        </div>
+
+        <!-- Booked Requests Box -->
+        <div class="booked-requests">
+            <h3>Your Booked Requests</h3>
+            {% if bookings %}
+                {% for booking in bookings %}
+                <div class="booking-item">
+                    <p><strong>Pickup:</strong> {{ booking.pickup_location }}</p>
+                    <p><strong>Drop-off:</strong> {{ booking.dropoff_location }}</p>
+                    <p><strong>Vehicle:</strong> {{ booking.vehicle_type }}</p>
+                    <p><strong>Scheduled Time:</strong> {{ booking.scheduled_date|date:"F j, Y" }}</p>
+                
+                    <p><strong>Cost:</strong> Rs {{ booking.estimated_cost }}</p>
+                    <p><strong>Driver:</strong> {{ booking.driver.user }}</p>
+                    {% if booking.status == 'accepted' %}
+                        <a href="{% url 'customer_tracking' booking.id %}" class="track-button">Track Driver</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>You have no booked requests.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        async function calculateCost() {
+            const pickupLocation = document.getElementById('pickup_location').value;
+            const dropoffLocation = document.getElementById('dropoff_location').value;
+            const vehicleType = document.getElementById('vehicle_type').value;
+
+            // Check if locations are provided
+            if (!pickupLocation || !dropoffLocation) {
+                alert("Please provide both pickup and drop-off locations.");
+                return;
+            }
+
+            try {
+                // Make an AJAX request to calculate distance
+                const response = await fetch(`/customer/calculate-distance/?pickup_location=${encodeURIComponent(pickupLocation)}&dropoff_location=${encodeURIComponent(dropoffLocation)}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const distance = data.distance; // Get the distance from response
+                    let costPerKm = 0;
+
+                    // Determine cost per km based on vehicle type
+                    if (vehicleType === 'Truck') {
+                        costPerKm = 60;
+                    } else if (vehicleType === 'Van') {
+                        costPerKm = 40;
+                    } else if (vehicleType === 'Bike') {
+                        costPerKm = 20;
+                    }
+                    // Calculate the estimated cost
+                    const estimatedCost = costPerKm * distance;
+                    document.getElementById('estimated_cost').value = estimatedCost.toFixed(2);
+                } else {
+                    // Handle error response from the server
+                    alert(data.error || 'Failed to calculate distance.');
+                }
+            } catch (error) {
+                console.error('Error fetching distance:', error);
+                alert('An error occurred while calculating the distance.');
+            }
+        }
+    </script>
+</body>
+</html>

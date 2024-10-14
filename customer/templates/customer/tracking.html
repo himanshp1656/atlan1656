@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Tracking</title>
+    <style>
+        #map {
+            height: 400px;  /* Set the height of the map */
+            width: 100%;    /* Full-width */
+        }
+    </style>
+</head>
+<body>
+    <h2>Driver Tracking</h2>
+    <div id="map"></div>
+    
+    <script>
+        let map;
+        let marker;
+
+        // Initialize the map
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 12,
+                center: { lat: 0, lng: 0 },  // Initial center
+            });
+            marker = new google.maps.Marker({
+                position: { lat: 0, lng: 0 }, // Initial position
+                map: map,
+            });
+        }
+
+        // Function to fetch the driver's current location
+        function fetchDriverLocation() {
+            fetch(`/customer/fetch-location/{{ booking_id }}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.latitude && data.longitude) {
+                        const position = new google.maps.LatLng(data.latitude, data.longitude);
+                        marker.setPosition(position);
+                        map.setCenter(position);  // Center the map on the driver's position
+                    }
+                })
+                .catch(error => console.error('Error fetching driver location:', error));
+        }
+
+        // Polling to fetch location every 10 seconds
+        setInterval(fetchDriverLocation, 10000);
+        
+        // Initialize the map when the page loads
+        window.onload = initMap;
+    </script>
+    
+    <script src="https://maps.gomaps.pro/maps/api/js?key=AlzaSyHRzJG3JUlm2KZ4Wr8utVNF9_IMr42qSkr"></script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Bookings</title>
+
+    <style>
+     body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f9f9f9;
+}
+
+h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2.5em;
+}
+
+.available-bookings, .status-bookings {
+    background: #fff;
+    border-radius: 8px;
+    padding: 30px;
+    margin: 20px auto;
+    max-width: 800px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s;
+}
+
+.available-bookings:hover, .status-bookings:hover {
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+h2 {
+    color: #2980b9;
+    border-bottom: 2px solid #2980b9;
+    padding-bottom: 10px;
+    margin-top: 0;
+    font-size: 1.8em;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    padding: 15px;
+    border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+li:hover {
+    background-color: #ecf0f1;
+}
+
+li:last-child {
+    border-bottom: none;
+}
+
+strong {
+    color: #34495e;
+}
+
+form {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+}
+
+button {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #219653;
+    transform: translateY(-1px);
+}
+
+select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #bdc3c7;
+    font-size: 0.9em;
+    margin-left: 10px;
+}
+
+p {
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 1.1em;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 2em;
+    }
+
+    .available-bookings, .status-bookings {
+        padding: 20px;
+    }
+
+    h2 {
+        font-size: 1.5em;
+    }
+
+    button {
+        padding: 8px 12px;
+        font-size: 0.8em;
+    }
+
+    select {
+        padding: 6px;
+        font-size: 0.8em;
+    }
+
+    li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    form {
+        margin-top: 10px;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.8em;
+    }
+
+    h2 {
+        font-size: 1.3em;
+    }
+
+    button {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    select {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 10px;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <h1>Available Bookings (within 50km)</h1>
+    
+    {% if bookings %}
+        <div class="available-bookings">
+            <h2>Pending Bookings</h2>
+            <ul>
+                {% for booking in bookings %}
+                    <li>
+                        <strong>Pickup:</strong> {{ booking.pickup_location }}
+                        <strong>Dropoff:</strong> {{ booking.dropoff_location }}
+                        <strong>Vehicle Type:</strong> {{ booking.vehicle_type }}
+                        <form method="POST" action="/driver/bookings/">
+                            {% csrf_token %}
+                            <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                            <button type="submit">Accept Booking</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <p>No available bookings within your area.</p>
+    {% endif %}
+
+    <h1>Your Bookings</h1>
+
+    <div class="status-bookings">
+
+
+        <!-- Accepted Bookings -->
+       <!-- Within each booking status section (for example, accepted bookings) -->
+<h2>Accepted</h2>
+<ul>
+    {% for booking in status_bookings %}
+        {% if booking.status == 'accepted' %}
+            <li>
+                <strong>Pickup:</strong> {{ booking.pickup_location }}
+                <strong>Dropoff:</strong> {{ booking.dropoff_location }}
+                <strong>Vehicle Type:</strong> {{ booking.vehicle_type }}
+                <strong>Status:</strong> {{ booking.get_status_display }}
+                <form method="POST" action="{% url 'change_booking_status' booking.id %}">
+                    {% csrf_token %}
+                    <select name="new_status">
+                        <option value="accepted">Accepted</option>
+                        <option value="on_the_way_to_pickup">On the Way to Pickup</option>
+                        <option value="in_progress_to_dropoff">In Progress to Dropoff</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                    <button type="submit">Update Status</button>
+                </form>
+                <a href="/driver/tracking/{{booking.id}}">share your location</a>
+            </li>
+        {% endif %}
+    {% endfor %}
+</ul>
+
+
+        <!-- On the Way to Pickup -->
+        <h2>On the Way to Pickup</h2>
+        <ul>
+            {% for booking in status_bookings %}
+                {% if booking.status == 'on_the_way_to_pickup' %}
+                    <li>
+                        <strong>Pickup:</strong> {{ booking.pickup_location }} 
+                        <strong>Dropoff:</strong> {{ booking.dropoff_location }} 
+                        <strong>Vehicle Type:</strong> {{ booking.vehicle_type }} 
+                        <strong>Status:</strong> {{ booking.get_status_display }}
+                        <form method="POST" action="{% url 'change_booking_status' booking.id %}">
+                            {% csrf_token %}
+                            <select name="new_status">
+                                <option value="accepted">Accepted</option>
+                                <option value="on_the_way_to_pickup">On the Way to Pickup</option>
+                                <option value="in_progress_to_dropoff">In Progress to Dropoff</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                            <button type="submit">Update Status</button>
+                        </form>
+                        <a href="/driver/tracking/{{booking.id}}">share your location</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+
+        <!-- In Progress to Dropoff -->
+        <h2>In Progress to Dropoff</h2>
+        <ul>
+            {% for booking in status_bookings %}
+                {% if booking.status == 'in_progress_to_dropoff' %}
+                    <li>
+                        <strong>Pickup:</strong> {{ booking.pickup_location }} 
+                        <strong>Dropoff:</strong> {{ booking.dropoff_location }} 
+                        <strong>Vehicle Type:</strong> {{ booking.vehicle_type }} 
+                        <strong>Status:</strong> {{ booking.get_status_display }}
+                        <form method="POST" action="{% url 'change_booking_status' booking.id %}">
+                            {% csrf_token %}
+                            <select name="new_status">
+                                <option value="accepted">Accepted</option>
+                                <option value="on_the_way_to_pickup">On the Way to Pickup</option>
+                                <option value="in_progress_to_dropoff">In Progress to Dropoff</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                            <button type="submit">Update Status</button>
+                        </form>
+                        <a href="/driver/tracking/{{booking.id}}">share your location</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+
+        <h2>Completed</h2>
+        <!-- Completed Bookings -->
+        <ul>
+            {% for booking in status_bookings %}
+                {% if booking.status == 'completed' %}
+                    <li>
+                        <strong>Pickup:</strong> {{ booking.pickup_location }} 
+                        <strong>Dropoff:</strong> {{ booking.dropoff_location }} 
+                        <strong>Vehicle Type:</strong> {{ booking.vehicle_type }} 
+                        <strong>Status:</strong> {{ booking.get_status_display }}
+                        <form method="POST" action="{% url 'change_booking_status' booking.id %}">
+                            {% csrf_token %}
+                            <select name="new_status">
+                                <option value="accepted">Accepted</option>
+                                <option value="on_the_way_to_pickup">On the Way to Pickup</option>
+                                <option value="in_progress_to_dropoff">In Progress to Dropoff</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                            <button type="submit">Update Status</button>
+                        </form>
+                        <a href="/driver/tracking/{{booking.id}}">share your location</a>
+
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+
+ 
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Tracking</title>
+    <style>
+         <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        #location-status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        #error-message {
+            color: #e74c3c;
+            display: none; /* Initially hidden */
+        }
+    </style>
+    </style>
+</head>
+<body>
+    <h2>Driver Tracking</h2>
+    <p>Sending your location...</p>
+    <div id="location-status"></div>
+    <div id="error-message">Error saving location!</div>
+
+    <script>
+        // Function to fetch the driver's current location
+        function sendDriverLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    // Display the current location in the UI
+                    document.getElementById('location-status').textContent = 
+                        `Current Location: Latitude ${latitude.toFixed(6)}, Longitude ${longitude.toFixed(6)}`;
+
+                    // Send the coordinates to the server
+                    fetch("/driver/update-location/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token }}"
+                        },
+                        body: JSON.stringify({
+                            'latitude': latitude,
+                            'longitude': longitude,
+                            'booking_id': {{ booking_id }}
+                        })
+                    }).then(response => {
+                        if (!response.ok) {
+                            document.getElementById('error-message').style.display = 'block';
+                            console.error('Error saving location');
+                        } else {
+                            document.getElementById('error-message').style.display = 'none';
+                        }
+                    }).catch(error => {
+                        document.getElementById('error-message').style.display = 'block';
+                        console.error('Network error:', error);
+                    });
+                }, function() {
+                    alert("Unable to retrieve your location. Please allow location access.");
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        // Polling to send location every 10 seconds
+        setInterval(sendDriverLocation, 10000);
+    </script>
+</body>
+</html>
